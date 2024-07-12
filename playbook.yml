@@ -1,0 +1,8 @@
+---
+- name: Playbook to print debug message
+  hosts: testHost
+  connection: local
+  tasks:
+    - name: Print a simple statement
+      debug:
+        msg: "Ansible event driven action is taken based on the event source :{{ eventSource }}"
