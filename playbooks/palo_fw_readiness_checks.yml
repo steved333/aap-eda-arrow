@@ -1,0 +1,20 @@
+---
+- name: Run all management plane checks using NOT notation
+  panos_readiness_checks:
+    provider: '{{ device }}'
+    checks:
+      - '!ha'
+      - '!session_exist'
+      - '!arp_entry_exist'
+      - '!ip_sec_tunnel_status'
+
+- name: Check if a specified session exists in vsys2, fail if it does not
+  panos_readiness_checks:
+    provider: '{{ device }}'
+    vsys: vsys2
+    force_fail: true
+    checks:
+      - session_exist:
+          source: '34.23.15.1'
+          destination: '10.1.0.4'
+          dest_port: '80'
