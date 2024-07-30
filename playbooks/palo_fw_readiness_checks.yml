@@ -18,3 +18,11 @@
           source: '34.23.15.1'
           destination: '10.1.0.4'
           dest_port: '80'
+
+- name: Wait for FW reboot
+  paloaltonetworks.panos.panos_check:
+    provider: '{{ provider }}'
+  register: result
+  until: not result|failed
+  retries: 50
+  delay: 5
