@@ -1,0 +1,98 @@
+---
+- name: Get NetApp info as Cluster Admin (Password Authentication)
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "admin"
+    password: "admins_password"
+  register: ontap_info
+- debug:
+    msg: "{{ ontap_info.ontap_info }}"
+
+- name: Get NetApp version as Vserver admin
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "vsadmin"
+    vserver: trident_svm
+    password: "vsadmins_password"
+
+- name: run ontap info module using vserver tunneling and ignoring errors
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "admin"
+    password: "admins_password"
+    vserver: trident_svm
+    summary: true
+    continue_on_error:
+      - missing_vserver_api_error
+      - rpc_error
+
+- name: Limit Info Gathering to Aggregate Information as Cluster Admin
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "admin"
+    password: "admins_password"
+    gather_subset: "aggregate_info"
+  register: ontap_info
+
+- name: Limit Info Gathering to Volume and Lun Information as Cluster Admin
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "admin"
+    password: "admins_password"
+    gather_subset:
+      - volume_info
+      - lun_info
+  register: ontap_info
+
+- name: Gather all info except for volume and lun information as Cluster Admin
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "admin"
+    password: "admins_password"
+    gather_subset:
+      - "!volume_info"
+      - "!lun_info"
+  register: ontap_info
+
+- name: Gather Volume move information for a specific volume
+  netapp.ontap.na_ontap_info:
+    hostname: "na-vsim"
+    username: "admin"
+    password: "admins_password"
+    gather_subset: volume_move_target_aggr_info
+    volume_move_target_aggr_info:
+      volume_name: carchitest
+      vserver: ansible
+
+- name: run ontap info module for aggregate module, requesting specific fields
+  netapp.ontap.na_ontap_info:
+    # <<: *login
+    gather_subset: aggregate_info
+    desired_attributes:
+      aggr-attributes:
+      aggr-inode-attributes:
+        files-private-used:
+      aggr-raid-attributes:
+        aggregate-type:
+    use_native_zapi_tags: true
+    register: ontap
+- debug: var=ontap
+
+- name: run ontap info to get offline volumes with dp in the name
+  netapp.ontap.na_ontap_info:
+    # <<: *cert_login
+    gather_subset: volume_info
+    query:
+      volume-attributes:
+        volume-id-attributes:
+          name: '*dp*'
+        volume-state-attributes:
+          state: offline
+    desired_attributes:
+      volume-attributes:
+        volume-id-attributes:
+          name:
+        volume-state-attributes:
+          state:
+  register: ontap
+- debug: var=ontap
