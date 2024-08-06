@@ -1,0 +1,55 @@
+---
+- name: Automate Palo Alto Security Policy Management
+  hosts: localhost
+  gather_facts: False
+  vars:
+    pan_hostname: "palo_alto_hostname"
+    pan_username: "admin"
+    pan_password: "password"
+    policies:
+      - name: "Allow-HTTP"
+        from_zone: "trust"
+        to_zone: "untrust"
+        source: "any"
+        destination: "any"
+        application: "web-browsing"
+        service: "application-default"
+        action: "allow"
+      - name: "Deny-SSH"
+        from_zone: "untrust"
+        to_zone: "trust"
+        source: "any"
+        destination: "any"
+        application: "ssh"
+        service: "application-default"
+        action: "deny"
+
+  tasks:
+    - name: Ensure Palo Alto Python SDK is installed
+      pip:
+        name: "pan-python"
+        state: present
+
+    - name: Apply security policies
+      loop: "{{ policies }}"
+      loop_control:
+        label: "{{ item.name }}"
+      panos_security_rule:
+        provider:
+          ip_address: "{{ pan_hostname }}"
+          username: "{{ pan_username }}"
+          password: "{{ pan_password }}"
+        rule_name: "{{ item.name }}"
+        from_zone: "{{ item.from_zone }}"
+        to_zone: "{{ item.to_zone }}"
+        source: "{{ item.source }}"
+        destination: "{{ item.destination }}"
+        application: "{{ item.application }}"
+        service: "{{ item.service }}"
+        action: "{{ item.action }}"
+        state: "present"
+      register: security_policy
+
+    - name: Debug security policy application
+      debug:
+        msg: "Security policy '{{ item.name }}' applied successfully"

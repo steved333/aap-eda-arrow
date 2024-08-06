@@ -1,0 +1,51 @@
+---
+- name: Automate Palo Alto NAT Rule Management
+  hosts: localhost
+  gather_facts: False
+  vars:
+    pan_hostname: "palo_alto_hostname"
+    pan_username: "admin"
+    pan_password: "password"
+    nat_rules:
+      - name: "NAT-Web-Servers"
+        source_zone: "trust"
+        destination_zone: "untrust"
+        source_address: "192.168.1.0/24"
+        destination_address: "any"
+        service: "any"
+        to_interface: "ethernet1/1"
+        source_translation_type: "dynamic-ip-and-port"
+        source_translation_address_type: "translated-address"
+        translated_address: "203.0.113.10"
+
+  tasks:
+    - name: Ensure Palo Alto Python SDK is installed
+      pip:
+        name: "pan-python"
+        state: present
+
+    - name: Apply NAT rules
+      loop: "{{ nat_rules }}"
+      loop_control:
+        label: "{{ item.name }}"
+      panos_nat_rule:
+        provider:
+          ip_address: "{{ pan_hostname }}"
+          username: "{{ pan_username }}"
+          password: "{{ pan_password }}"
+        rule_name: "{{ item.name }}"
+        source_zone: "{{ item.source_zone }}"
+        destination_zone: "{{ item.destination_zone }}"
+        source_address: "{{ item.source_address }}"
+        destination_address: "{{ item.destination_address }}"
+        service: "{{ item.service }}"
+        to_interface: "{{ item.to_interface }}"
+        source_translation_type: "{{ item.source_translation_type }}"
+        source_translation_address_type: "{{ item.source_translation_address_type }}"
+        translated_address: "{{ item.translated_address }}"
+        state: "present"
+      register: nat_rule
+
+    - name: Debug NAT rule application
+      debug:
+        msg: "NAT rule '{{ item.name }}' applied successfully"
