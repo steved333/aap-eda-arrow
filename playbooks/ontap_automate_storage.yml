@@ -1,0 +1,69 @@
+---
+- name: Automate NetApp ONTAP Storage Tasks
+  hosts: localhost
+  gather_facts: False
+  vars:
+    ontap_hostname: "ontap_cluster_hostname"
+    ontap_username: "admin"
+    ontap_password: "password"
+    vserver: "vserver_name"
+    aggregate: "aggr1"
+    volume_name: "my_volume"
+    volume_size: "100GB"
+    snapshot_policy: "default"
+    export_policy: "default"
+
+  tasks:
+    - name: Create a volume
+      na_ontap_volume:
+        state: present
+        hostname: "{{ ontap_hostname }}"
+        username: "{{ ontap_username }}"
+        password: "{{ ontap_password }}"
+        vserver: "{{ vserver }}"
+        name: "{{ volume_name }}"
+        aggregate_name: "{{ aggregate }}"
+        size: "{{ volume_size }}"
+        space_guarantee: 'none'
+        snapshot_policy: "{{ snapshot_policy }}"
+      register: volume_creation
+
+    - name: Debug volume creation
+      debug:
+        msg: "Volume '{{ volume_name }}' created with size '{{ volume_size }}'"
+
+    - name: Create an export policy rule
+      na_ontap_export_policy_rule:
+        state: present
+        hostname: "{{ ontap_hostname }}"
+        username: "{{ ontap_username }}"
+        password: "{{ ontap_password }}"
+        vserver: "{{ vserver }}"
+        policy_name: "{{ export_policy }}"
+        client_match: "0.0.0.0/0"
+        ro_rule: 'any'
+        rw_rule: 'any'
+        superuser: 'any'
+      register: export_policy_rule
+
+    - name: Debug export policy rule creation
+      debug:
+        msg: "Export policy rule for '{{ export_policy }}' created with client match '0.0.0.0/0'"
+
+    - name: Create a snapshot policy
+      na_ontap_snapshot_policy:
+        state: present
+        hostname: "{{ ontap_hostname }}"
+        username: "{{ ontap_username }}"
+        password: "{{ ontap_password }}"
+        vserver: "{{ vserver }}"
+        name: "{{ snapshot_policy }}"
+        hourly: 2
+        daily: 1
+        weekly: 1
+        monthly: 1
+      register: snapshot_policy_creation
+
+    - name: Debug snapshot policy creation
+      debug:
+        msg: "Snapshot policy '{{ snapshot_policy }}' created with hourly=2, daily=1, weekly=1, monthly=1"

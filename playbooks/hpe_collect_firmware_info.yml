@@ -1,0 +1,35 @@
+---
+- name: Collect Firmware Information from HPE OneView
+  hosts: localhost
+  gather_facts: False
+  vars:
+    oneview_hostname: "oneview_host"
+    oneview_username: "read_only_user"
+    oneview_password: "password"
+
+  tasks:
+    - name: Ensure HPE OneView Python SDK is installed
+      pip:
+        name: "hpOneView"
+        state: present
+
+    - name: Get firmware information
+      hpe_oneview_firmware_facts:
+        config: "{{ playbook_dir }}/oneview_config.json"
+      register: firmware_info
+
+    - name: Debug firmware information
+      debug:
+        msg: "{{ firmware_info }}"
+
+    - name: Save configuration to oneview_config.json
+      copy:
+        dest: "{{ playbook_dir }}/oneview_config.json"
+        content: |
+          {
+            "ip": "{{ oneview_hostname }}",
+            "credentials": {
+              "userName": "{{ oneview_username }}",
+              "password": "{{ oneview_password }}"
+            }
+          }

@@ -1,0 +1,32 @@
+---
+- name: Optimize Nutanix AHV Storage Performance
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: Get the list of storage containers
+      nutanix_storage_container_info:
+        cluster: "{{ cluster_name }}"
+      register: storage_info
+
+    - name: Adjust storage container policies
+      loop: "{{ storage_info.containers }}"
+      loop_control:
+        label: "{{ item.name }}"
+      tasks:
+        - name: Ensure data reduction is enabled
+          nutanix_storage_container_update:
+            cluster: "{{ cluster_name }}"
+            container_uuid: "{{ item.uuid }}"
+            data_reduction: enabled
+
+        - name: Ensure compression is enabled
+          nutanix_storage_container_update:
+            cluster: "{{ cluster_name }}"
+            container_uuid: "{{ item.uuid }}"
+            compression: enabled
+
+        - name: Ensure erasure coding is enabled
+          nutanix_storage_container_update:
+            cluster: "{{ cluster_name }}"
+            container_uuid: "{{ item.uuid }}"
+            erasure_coding: enabled

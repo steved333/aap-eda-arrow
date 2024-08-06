@@ -1,0 +1,35 @@
+---
+- name: Collect Server Hardware Information from HPE OneView
+  hosts: localhost
+  gather_facts: False
+  vars:
+    oneview_hostname: "oneview_host"
+    oneview_username: "read_only_user"
+    oneview_password: "password"
+
+  tasks:
+    - name: Ensure HPE OneView Python SDK is installed
+      pip:
+        name: "hpOneView"
+        state: present
+
+    - name: Get server hardware information
+      hpe_oneview_server_hardware_facts:
+        config: "{{ playbook_dir }}/oneview_config.json"
+      register: server_hardware_info
+
+    - name: Debug server hardware information
+      debug:
+        msg: "{{ server_hardware_info }}"
+
+    - name: Save configuration to oneview_config.json
+      copy:
+        dest: "{{ playbook_dir }}/oneview_config.json"
+        content: |
+          {
+            "ip": "{{ oneview_hostname }}",
+            "credentials": {
+              "userName": "{{ oneview_username }}",
+              "password": "{{ oneview_password }}"
+            }
+          }

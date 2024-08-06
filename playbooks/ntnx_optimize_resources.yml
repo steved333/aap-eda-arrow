@@ -1,0 +1,38 @@
+---
+- name: Optimize Nutanix AHV VM Resources
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: Get the list of VMs
+      nutanix_vm_info:
+        cluster: "{{ cluster_name }}"
+      register: vm_info
+
+    - name: Check and adjust VM CPU and memory allocation
+      loop: "{{ vm_info.vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+      tasks:
+        - name: Check CPU overcommitment
+          assert:
+            that: item.num_vcpus <= (physical_cpus * cpu_overcommit_ratio)
+            fail_msg: "VM {{ item.name }} is overcommitting CPU resources"
+        
+        - name: Check memory overcommitment
+          assert:
+            that: item.memory_mb <= (physical_memory_mb * memory_overcommit_ratio)
+            fail_msg: "VM {{ item.name }} is overcommitting memory resources"
+        
+        - name: Adjust CPU allocation
+          when: item.num_vcpus > (physical_cpus * cpu_overcommit_ratio)
+          nutanix_vm_update:
+            cluster: "{{ cluster_name }}"
+            vm_uuid: "{{ item.uuid }}"
+            num_vcpus: "{{ physical_cpus * cpu_overcommit_ratio }}"
+
+        - name: Adjust memory allocation
+          when: item.memory_mb > (physical_memory_mb * memory_overcommit_ratio)
+          nutanix_vm_update:
+            cluster: "{{ cluster_name }}"
+            vm_uuid: "{{ item.uuid }}"
+            memory_mb: "{{ physical_memory_mb * memory_overcommit_ratio }}"

@@ -1,0 +1,53 @@
+---
+- name: Automate HPE OneView Server Profile Deployment
+  hosts: localhost
+  gather_facts: False
+  vars:
+    oneview_hostname: "oneview_host"
+    oneview_username: "admin"
+    oneview_password: "password"
+    server_profile_template: "TemplateName"
+    server_hardware_type: "HardwareType"
+    enclosure_group: "EnclosureGroup"
+    server_profiles:
+      - name: "ServerProfile1"
+        server_hardware: "ServerHardware1"
+      - name: "ServerProfile2"
+        server_hardware: "ServerHardware2"
+
+  tasks:
+    - name: Ensure HPE OneView Python SDK is installed
+      pip:
+        name: "hpOneView"
+        state: present
+
+    - name: Create server profiles from template
+      loop: "{{ server_profiles }}"
+      loop_control:
+        label: "{{ item.name }}"
+      hpe_oneview_server_profile:
+        config: "{{ playbook_dir }}/oneview_config.json"
+        state: present
+        data:
+          name: "{{ item.name }}"
+          serverProfileTemplateUri: "/rest/server-profile-templates/{{ server_profile_template }}"
+          serverHardwareUri: "/rest/server-hardware/{{ item.server_hardware }}"
+          serverHardwareTypeUri: "/rest/server-hardware-types/{{ server_hardware_type }}"
+          enclosureGroupUri: "/rest/enclosure-groups/{{ enclosure_group }}"
+      register: server_profile_creation
+
+    - name: Debug server profile creation
+      debug:
+        msg: "Server profile '{{ item.name }}' created successfully"
+
+    - name: Save configuration to oneview_config.json
+      copy:
+        dest: "{{ playbook_dir }}/oneview_config.json"
+        content: |
+          {
+            "ip": "{{ oneview_hostname }}",
+            "credentials": {
+              "userName": "{{ oneview_username }}",
+              "password": "{{ oneview_password }}"
+            }
+          }

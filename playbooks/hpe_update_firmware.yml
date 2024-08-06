@@ -1,0 +1,48 @@
+---
+- name: Automate HPE OneView Firmware Management
+  hosts: localhost
+  gather_facts: False
+  vars:
+    oneview_hostname: "oneview_host"
+    oneview_username: "admin"
+    oneview_password: "password"
+    firmware_baseline: "FirmwareBaselineName"
+    server_hardware_list:
+      - "ServerHardware1"
+      - "ServerHardware2"
+
+  tasks:
+    - name: Ensure HPE OneView Python SDK is installed
+      pip:
+        name: "hpOneView"
+        state: present
+
+    - name: Update firmware on server hardware
+      loop: "{{ server_hardware_list }}"
+      loop_control:
+        label: "{{ item }}"
+      hpe_oneview_firmware:
+        config: "{{ playbook_dir }}/oneview_config.json"
+        state: present
+        data:
+          serverHardwareUri: "/rest/server-hardware/{{ item }}"
+          firmwareBaselineUri: "/rest/firmware-drivers/{{ firmware_baseline }}"
+          firmwareUpdateOn: "FirmwareAndDrivers"
+          forceInstallFirmware: True
+      register: firmware_update
+
+    - name: Debug firmware update
+      debug:
+        msg: "Firmware updated on server hardware '{{ item }}'"
+
+    - name: Save configuration to oneview_config.json
+      copy:
+        dest: "{{ playbook_dir }}/oneview_config.json"
+        content: |
+          {
+            "ip": "{{ oneview_hostname }}",
+            "credentials": {
+              "userName": "{{ oneview_username }}",
+              "password": "{{ oneview_password }}"
+            }
+          }
