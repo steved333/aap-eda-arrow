@@ -1,0 +1,135 @@
+---
+- name: Perform administrative tasks in Turbonomic
+  hosts: localhost
+  gather_facts: no
+  vars:
+    turbonomic_server: "https://turbonomic.example.com"  # Replace with your Turbonomic server URL
+    turbonomic_user: "admin"  # Replace with your Turbonomic user
+    turbonomic_password: "password"  # Replace with your Turbonomic password
+    vmware_vcenter_host: "vcenter.example.com"  # Replace with your vCenter hostname or IP
+    vmware_vcenter_user: "administrator@vsphere.local"  # Replace with your vCenter user
+    vmware_vcenter_password: "your-vcenter-password"  # Replace with your vCenter password
+    kubernetes_context: "your-cluster-context"  # Replace with your Kubernetes context
+
+  tasks:
+    - name: Add VMware vCenter as a target to Turbonomic
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/target"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "type": "VMWARE_VCENTER",
+            "name": "vCenter",
+            "authentication": {
+              "username": "{{ vmware_vcenter_user }}",
+              "password": "{{ vmware_vcenter_password }}"
+            },
+            "address": "{{ vmware_vcenter_host }}",
+            "accountId": "{{ vmware_vcenter_user }}"
+          }
+        status_code: 201
+      register: add_vcenter_result
+
+    - name: Debug output for adding VMware vCenter
+      debug:
+        var: add_vcenter_result
+
+    - name: Add Kubernetes cluster as a target to Turbonomic
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/target"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "type": "KUBERNETES",
+            "name": "Kubernetes Cluster",
+            "authentication": {
+              "username": "{{ turbonomic_user }}",
+              "password": "{{ turbonomic_password }}"
+            },
+            "address": "{{ kubernetes_context }}",
+            "accountId": "{{ kubernetes_context }}"
+          }
+        status_code: 201
+      register: add_kubernetes_result
+
+    - name: Debug output for adding Kubernetes cluster
+      debug:
+        var: add_kubernetes_result
+
+    - name: Create automation policy for optimal performance in Turbonomic
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/policy"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "name": "Performance Optimization Policy",
+            "type": "AUTO_SCALING",
+            "scopeType": "KUBERNETES_CLUSTER",
+            "scope": "{{ kubernetes_context }}",
+            "actions": {
+              "scaleUp": {
+                "enabled": true
+              },
+              "scaleDown": {
+                "enabled": true
+              }
+            }
+          }
+        status_code: 201
+      register: create_policy_result
+
+    - name: Debug output for creating automation policy
+      debug:
+        var: create_policy_result
+
+    - name: Plan for workload migration and optimization
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/plan"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "name": "Workload Migration Plan",
+            "description": "Plan for migrating and optimizing workloads",
+            "scope": [
+              {
+                "type": "KUBERNETES_CLUSTER",
+                "entityId": "{{ kubernetes_context }}"
+              }
+            ],
+            "actions": [
+              "MOVE",
+              "SCALE"
+            ],
+            "targets": [
+              {
+                "type": "VMWARE_VCENTER",
+                "entityId": "{{ vmware_vcenter_host }}"
+              }
+            ]
+          }
+        status_code: 201
+      register: create_plan_result
+
+    - name: Debug output for creating workload migration plan
+      debug:
+        var: create_plan_result

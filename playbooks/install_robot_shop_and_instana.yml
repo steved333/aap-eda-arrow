@@ -1,0 +1,78 @@
+---
+- name: Install and configure Stan's Robot Shop with Instana monitoring
+  hosts: all
+  become: yes
+
+  vars:
+    instana_agent_key: "YOUR_INSTANA_AGENT_KEY"  # Replace with your Instana agent key
+    instana_agent_zone: "default"  # Replace with your Instana agent zone if necessary
+    instana_download_url: "https://artifact-public.instana.io/artifactory/agent-installer/com/instana/agent/deb/1.0.0/instana-agent.deb"  # Replace with the correct Instana agent URL
+
+  tasks:
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisites
+      apt:
+        name: 
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Ensure Docker service is running
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Clone Stan's Robot Shop repository
+      git:
+        repo: https://github.com/instana/robot-shop.git
+        dest: /opt/robot-shop
+
+    - name: Deploy Stan's Robot Shop using Docker Compose
+      shell: docker-compose up -d
+      args:
+        chdir: /opt/robot-shop
+
+    - name: Download Instana agent
+      get_url:
+        url: "{{ instana_download_url }}"
+        dest: /tmp/instana-agent.deb
+
+    - name: Install Instana agent
+      apt:
+        deb: /tmp/instana-agent.deb
+
+    - name: Configure Instana agent
+      copy:
+        dest: /etc/instana/agent.key
+        content: "{{ instana_agent_key }}"
+        mode: '0600'
+
+    - name: Set Instana agent zone (optional)
+      lineinfile:
+        path: /etc/instana/agent.cfg
+        regexp: '^# zone:'
+        line: "zone: {{ instana_agent_zone }}"
+        create: yes
+
+    - name: Start Instana agent service
+      systemd:
+        name: instana-agent
+        state: started
+        enabled: yes
+
+    - name: Reboot the system to apply all changes (optional)
+      reboot:
+        msg: "Reboot initiated by Ansible for finalizing Instana agent installation."
+        connect_timeout: 5
+        reboot_timeout: 600

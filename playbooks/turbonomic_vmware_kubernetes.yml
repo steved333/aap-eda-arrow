@@ -1,0 +1,117 @@
+---
+- name: Setup On-prem Visibility and Performance Optimization with Turbonomic for VMware and Kubernetes
+  hosts: all
+  become: yes
+
+  vars:
+    turbonomic_server: "https://turbonomic.example.com"  # Replace with your Turbonomic server URL
+    turbonomic_user: "admin"  # Replace with your Turbonomic user
+    turbonomic_password: "password"  # Replace with your Turbonomic password
+    kubernetes_context: "your-cluster-context"  # Replace with your Kubernetes context
+    vmware_vcenter_host: "vcenter.example.com"  # Replace with your vCenter hostname or IP
+    vmware_vcenter_user: "administrator@vsphere.local"  # Replace with your vCenter user
+    vmware_vcenter_password: "your-vcenter-password"  # Replace with your vCenter password
+    esxi_host_list:  # List of ESXi hosts to connect to vCenter
+      - "esxi1.example.com"
+      - "esxi2.example.com"
+
+  tasks:
+    - name: Install prerequisites
+      apt:
+        name:
+          - curl
+          - jq
+          - open-vm-tools
+        state: present
+
+    - name: Connect to vCenter and add ESXi hosts
+      vmware_host:
+        hostname: "{{ vmware_vcenter_host }}"
+        username: "{{ vmware_vcenter_user }}"
+        password: "{{ vmware_vcenter_password }}"
+        esxi_hostname: "{{ item }}"
+        state: present
+        cluster_name: "your-cluster-name"  # Replace with your vCenter cluster name
+        validate_certs: no
+      loop: "{{ esxi_host_list }}"
+      delegate_to: localhost
+
+    - name: Install Turbonomic KubeTurbo on Kubernetes
+      shell: |
+        kubectl config use-context {{ kubernetes_context }}
+        kubectl apply -f https://raw.githubusercontent.com/turbonomic/kubeturbo/master/deploy/kubeturbo.yaml
+      delegate_to: localhost
+
+    - name: Wait for KubeTurbo pods to be ready
+      shell: |
+        kubectl wait --for=condition=ready pod -l app=kubeturbo -n kube-system --timeout=300s
+      delegate_to: localhost
+
+    - name: Install Turbonomic agent on ESXi hosts
+      shell: |
+        for host in {{ esxi_host_list }}; do
+          ssh root@$host "wget -O /tmp/turboagent.tar.gz {{ turbonomic_server }}/turboagent.tar.gz"
+          ssh root@$host "tar -xzf /tmp/turboagent.tar.gz -C /opt"
+          ssh root@$host "/opt/turboagent/install.sh"
+        done
+      delegate_to: localhost
+
+    - name: Configure Turbonomic agent
+      shell: |
+        for host in {{ esxi_host_list }}; do
+          ssh root@$host "echo 'TURBONOMIC_SERVER={{ turbonomic_server }}' >> /opt/turboagent/config"
+          ssh root@$host "/opt/turboagent/restart.sh"
+        done
+      delegate_to: localhost
+
+    - name: Connect Turbonomic to VMware vCenter
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/target"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "type": "VMWARE_VCENTER",
+            "name": "vCenter",
+            "authentication": {
+              "username": "{{ vmware_vcenter_user }}",
+              "password": "{{ vmware_vcenter_password }}"
+            },
+            "address": "{{ vmware_vcenter_host }}",
+            "accountId": "{{ vmware_vcenter_user }}"
+          }
+        status_code: 201
+      delegate_to: localhost
+
+    - name: Connect Turbonomic to Kubernetes cluster
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/target"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "type": "KUBERNETES",
+            "name": "Kubernetes Cluster",
+            "authentication": {
+              "username": "{{ turbonomic_user }}",
+              "password": "{{ turbonomic_password }}"
+            },
+            "address": "{{ kubernetes_context }}",
+            "accountId": "{{ kubernetes_context }}"
+          }
+        status_code: 201
+      delegate_to: localhost
+
+    - name: Reboot ESXi hosts to apply all changes (optional)
+      reboot:
+        reboot_command: "/sbin/reboot"
+      loop: "{{ esxi_host_list }}"
+      when: false  # Set to true if you want to reboot the ESXi hosts

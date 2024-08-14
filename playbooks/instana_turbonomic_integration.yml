@@ -1,0 +1,122 @@
+---
+- name: Integrate Instana and Turbonomic for performance and efficiency
+  hosts: localhost
+  gather_facts: no
+  vars:
+    instana_server: "https://instana.example.com"  # Replace with your Instana server URL
+    instana_api_token: "your_instana_api_token"  # Replace with your Instana API token
+    turbonomic_server: "https://turbonomic.example.com"  # Replace with your Turbonomic server URL
+    turbonomic_user: "admin"  # Replace with your Turbonomic user
+    turbonomic_password: "password"  # Replace with your Turbonomic password
+
+  tasks:
+    - name: Ensure Instana API token is valid
+      uri:
+        url: "{{ instana_server }}/api/application-monitoring"
+        method: GET
+        headers:
+          Authorization: apiToken {{ instana_api_token }}
+        validate_certs: no
+      register: instana_api_validation
+
+    - name: Debug output for Instana API token validation
+      debug:
+        var: instana_api_validation
+
+    - name: Add Instana as a target in Turbonomic
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/target"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "type": "INSTANA",
+            "name": "Instana Integration",
+            "authentication": {
+              "apiToken": "{{ instana_api_token }}"
+            },
+            "address": "{{ instana_server }}"
+          }
+        status_code: 201
+      register: add_instana_target_result
+
+    - name: Debug output for adding Instana target
+      debug:
+        var: add_instana_target_result
+
+    - name: Create Turbonomic policy based on Instana metrics
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/policy"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "name": "Instana Performance Optimization Policy",
+            "type": "APPLICATION_OPTIMIZATION",
+            "scopeType": "INSTANA_APPLICATION",
+            "scope": "all",
+            "actions": {
+              "scaleUp": {
+                "enabled": true,
+                "trigger": {
+                  "metric": "cpu",
+                  "operator": "GREATER_THAN",
+                  "threshold": 80
+                }
+              },
+              "scaleDown": {
+                "enabled": true,
+                "trigger": {
+                  "metric": "cpu",
+                  "operator": "LESS_THAN",
+                  "threshold": 20
+                }
+              }
+            }
+          }
+        status_code: 201
+      register: create_instana_policy_result
+
+    - name: Debug output for creating Instana-based policy
+      debug:
+        var: create_instana_policy_result
+
+    - name: Create workload optimization plan using Instana data
+      uri:
+        url: "{{ turbonomic_server }}/api/v3/plan"
+        method: POST
+        user: "{{ turbonomic_user }}"
+        password: "{{ turbonomic_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        body: |
+          {
+            "name": "Instana-driven Workload Optimization Plan",
+            "description": "Plan for optimizing workloads based on Instana metrics",
+            "scope": [
+              {
+                "type": "INSTANA_APPLICATION",
+                "entityId": "all"
+              }
+            ],
+            "actions": [
+              "MOVE",
+              "SCALE"
+            ]
+          }
+        status_code: 201
+      register: create_instana_plan_result
+
+    - name: Debug output for creating workload optimization plan
+      debug:
+        var: create_instana_plan_result
+        
