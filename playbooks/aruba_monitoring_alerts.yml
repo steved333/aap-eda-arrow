@@ -1,0 +1,28 @@
+---
+- name: Install Aruba Central Collection
+  hosts: localhost
+  tasks:
+    - name: Install Aruba Central Collection
+      ansible.builtin.shell:
+        cmd: "ansible-galaxy collection install arubanetworks.aruba_central"
+      become: yes
+
+- name: Configure Aruba Central Monitoring and Alerts
+  hosts: aruba_devices
+  tasks:
+    - name: Set monitoring thresholds
+      arubanetworks.aruba_central.central_alert_threshold:
+        central_host: "{{ central_host }}"
+        access_token: "{{ central_access_token }}"
+        ap_name: "MyAP"
+        threshold_type: "client_count"
+        threshold_value: 50
+        state: present
+
+    - name: Enable alerts
+      arubanetworks.aruba_central.central_alert_config:
+        central_host: "{{ central_host }}"
+        access_token: "{{ central_access_token }}"
+        ap_name: "MyAP"
+        alert_type: "client_count"
+        state: present

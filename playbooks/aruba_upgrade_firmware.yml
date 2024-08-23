@@ -1,0 +1,20 @@
+---
+- name: Upgrade Aruba Firmware
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Transfer firmware image to switch
+      arubaoss_file_transfer:
+        ip: "172.31.254.185"
+        file_type: "FTT_FIRMWARE"
+        action: "FTA_DOWNLOAD"
+        url: "http://172.31.251.102/images/WC_16_09_0010.swi"
+        boot_image: "BI_PRIMARY_IMAGE"
+        force_firmware_install: true
+      delegate_to: localhost
+
+    - name: Reboot switch
+      arubaoss_reboot:
+        ip: "172.31.254.185"
+        state: "warm"
+      delegate_to: localhost

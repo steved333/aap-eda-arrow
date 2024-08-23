@@ -1,0 +1,16 @@
+---
+- name: Schedule Aruba Device Backups
+  hosts: aruba_devices
+  tasks:
+    - name: Transfer backup files
+      # Use the appropriate module (e.g., fetch, synchronize) to transfer backup files to a central location.
+      # Specify the source and destination paths.
+
+    - name: Schedule cron job
+      cron:
+        name: "Aruba Backup"
+        minute: "0"
+        hour: "2"  # Adjust the time as needed
+        job: "/path/to/backup_script.sh"  # Path to your backup script
+
+    # Add other tasks as needed (e.g., cleanup old backups, notify on success/failure).
