@@ -1,0 +1,36 @@
+---
+- name: Deploy Security Policy to Palo Alto Firewall
+  hosts: paloalto
+  gather_facts: no
+  connection: local
+  vars:
+    firewall_ip: "192.168.1.1"  # Replace with your firewall's IP
+    admin_user: "admin"          # Replace with your admin username
+    admin_password: "password"    # Replace with your admin password
+    policy_name: "Allow_HTTP"     # Name of the security policy
+    source_zone: "trust"          # Source zone
+    destination_zone: "untrust"   # Destination zone
+    application: "web-browsing"    # Application to allow
+    action: "allow"                # Action for the policy
+
+  tasks:
+    - name: Configure Security Policy
+      paloalto.panos.panos_security_rule:
+        provider:
+          ip_address: "{{ firewall_ip }}"
+          username: "{{ admin_user }}"
+          password: "{{ admin_password }}"
+        rule_name: "{{ policy_name }}"
+        source_zones: 
+          - "{{ source_zone }}"
+        destination_zones: 
+          - "{{ destination_zone }}"
+        applications:
+          - "{{ application }}"
+        action: "{{ action }}"
+        state: present
+      register: policy_result
+
+    - name: Display policy result
+      debug:
+        var: policy_result
