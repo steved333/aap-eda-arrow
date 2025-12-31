@@ -3,7 +3,7 @@
   hosts: palo_alto_firewalls
   connection: local
   gather_facts: false
-
+  
   collections:
     - paloaltonetworks.panos
 
