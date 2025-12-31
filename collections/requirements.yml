@@ -1,3 +1,27 @@
 ---
 collections:
+  # Palo Alto Networks
   - name: paloaltonetworks.panos
+  
+  # Aruba
+  - name: arubanetworks.aos_switch
+  - name: arubanetworks.aoscx
+  
+  # HPE
+  - name: hpe.nimble
+  
+  # NetApp ONTAP
+  - name: netapp.ontap
+  - name: netapp.storagegrid
+  
+  # Nutanix
+  - name: nutanix.ncp
+  
+  # VMware
+  - name: community.vmware
+  
+  # General/Common
+  - name: ansible.posix
+  - name: community.general
+  - name: ansible.utils
+  - name: ansible.netcommon
